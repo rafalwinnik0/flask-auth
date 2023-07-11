@@ -11,7 +11,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 app.app_context().push()
-
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -37,21 +36,26 @@ def home():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == "POST":
+        email = request.form.get('email')
 
-        hash_and_salted_password = generate_password_hash(
-            request.form.get('password'),
-            method = 'pbkdf2:sha256',
-            salt_length = 8
-        )
+        if User.query.filter_by(email=email).first():
+            not_register = True
+            return render_template("login.html", not_register=not_register)
+        else:
+            hash_and_salted_password = generate_password_hash(
+                request.form.get('password'),
+                method = 'pbkdf2:sha256',
+                salt_length = 8
+            )
 
-        new_user = User(
-            email = request.form.get('email'),
-            password=hash_and_salted_password,
-            name = request.form.get('name')
-        )
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for("secrets", name=new_user.name))
+            new_user = User(
+                email = email,
+                password=hash_and_salted_password,
+                name = request.form.get('name')
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            return redirect(url_for("secrets", name=new_user.name))
 
     return render_template("register.html")
 
@@ -61,12 +65,13 @@ def login():
     if request.method == "POST":
         email = request.form.get('email')
         password = request.form.get('password')
-
         user = User.query.filter_by(email=email).first()
-
         if check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('secrets', name=user.name))
+        else:
+            not_exist = True
+            return render_template("login.html", not_exist=not_exist)
 
     return render_template("login.html")
 
